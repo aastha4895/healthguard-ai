@@ -66,13 +66,33 @@ function Nav() {
 
 function LiveBadge({ label }: { label: string }) {
   return (
-    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-medical-500/10 border border-medical-500/20 text-medical-600 text-xs font-bold uppercase tracking-wider">
+    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-medical-500/10 border border-medical-500/20 text-medical-700 text-xs font-bold uppercase tracking-wider">
       <span className="relative flex h-2 w-2">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-medical-400 opacity-75" />
         <span className="relative inline-flex rounded-full h-2 w-2 bg-medical-500" />
       </span>
       {label}
     </div>
+  );
+}
+
+function EKGLine() {
+  return (
+    <svg
+      viewBox="0 0 600 60"
+      className="w-full h-10 text-medical-500"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M0 30 L120 30 L140 30 L150 10 L165 50 L180 20 L195 40 L210 30 L340 30 L355 15 L370 45 L385 30 L600 30"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
