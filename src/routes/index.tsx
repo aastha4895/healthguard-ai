@@ -24,7 +24,12 @@ function Logo() {
   return (
     <div className="flex items-center gap-2.5">
       <div className="relative w-8 h-8 bg-medical-500 rounded-lg flex items-center justify-center shadow-lg shadow-medical-500/30">
-        <div className="w-3.5 h-3.5 border-[1.5px] border-white rounded-[3px]" />
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"
+          />
+        </svg>
         <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-safety-500 rounded-full ring-2 ring-ink-50" />
       </div>
       <span className="font-bold text-xl tracking-tight text-ink-950">OmniNode</span>
@@ -61,13 +66,33 @@ function Nav() {
 
 function LiveBadge({ label }: { label: string }) {
   return (
-    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-medical-500/10 border border-medical-500/20 text-medical-600 text-xs font-bold uppercase tracking-wider">
+    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-medical-500/10 border border-medical-500/20 text-medical-700 text-xs font-bold uppercase tracking-wider">
       <span className="relative flex h-2 w-2">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-medical-400 opacity-75" />
         <span className="relative inline-flex rounded-full h-2 w-2 bg-medical-500" />
       </span>
       {label}
     </div>
+  );
+}
+
+function EKGLine() {
+  return (
+    <svg
+      viewBox="0 0 600 60"
+      className="w-full h-10 text-medical-500"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M0 30 L120 30 L140 30 L150 10 L165 50 L180 20 L195 40 L210 30 L340 30 L355 15 L370 45 L385 30 L600 30"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -95,7 +120,11 @@ function Hero() {
             </button>
           </div>
 
-          <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-8 max-w-2xl">
+          <div className="mt-14 max-w-2xl opacity-70">
+            <EKGLine />
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-8 max-w-2xl">
             <Stat value="14" label="Hospital nodes" />
             <Stat value="412" label="Global rounds" />
             <Stat value="94.2%" label="Model accuracy" />
