@@ -120,7 +120,11 @@ function Hero() {
             </button>
           </div>
 
-          <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-8 max-w-2xl">
+          <div className="mt-14 max-w-2xl opacity-70">
+            <EKGLine />
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-8 max-w-2xl">
             <Stat value="14" label="Hospital nodes" />
             <Stat value="412" label="Global rounds" />
             <Stat value="94.2%" label="Model accuracy" />
