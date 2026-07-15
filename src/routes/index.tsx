@@ -24,7 +24,12 @@ function Logo() {
   return (
     <div className="flex items-center gap-2.5">
       <div className="relative w-8 h-8 bg-medical-500 rounded-lg flex items-center justify-center shadow-lg shadow-medical-500/30">
-        <div className="w-3.5 h-3.5 border-[1.5px] border-white rounded-[3px]" />
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"
+          />
+        </svg>
         <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-safety-500 rounded-full ring-2 ring-ink-50" />
       </div>
       <span className="font-bold text-xl tracking-tight text-ink-950">OmniNode</span>
