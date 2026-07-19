@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background rounded square -->
+  <rect width="32" height="32" rx="8" fill="oklch(0.62 0.14 195)"/>
+  <!-- Medical cross -->
+  <path d="M13 7h6v6h6v6h-6v6h-6v-6H7v-6h6z" fill="white"/>
+  <!-- Green dot indicator -->
+  <circle cx="26" cy="6" r="4" fill="oklch(0.72 0.17 160)"/>
+</svg>
