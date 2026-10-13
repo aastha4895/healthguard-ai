@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ShieldPlus, ArrowRight, Lock, Network, Brain, ChevronRight } from "lucide-react";
+import { ShieldPlus, ArrowRight, Lock, Network, ScanSearch, Calculator, ChevronRight, Database } from "lucide-react";
 import { useState, useEffect } from "react";
+import { ACCURACY, DATASETS, FEDERATED_GAIN, FEDERATION, MIA_AUC } from "@/lib/paper-data";
 
 export const Route = createFileRoute("/")(({
   component: LandingPage,
@@ -11,7 +12,7 @@ function LandingPage() {
     <div className="min-h-screen bg-white text-ink-900 font-sans antialiased">
       <Nav />
       <Hero />
-      <TrustedBy />
+      <EvaluatedOn />
       <HowItWorks />
       <PrivacyPillars />
       <Stats />
@@ -80,13 +81,10 @@ function EKGLine() {
 
 const floatingChips = [
   { label: "Federated Learning",   top: "8%",  right: "4%",  delay: "0s",    duration: "4s"  },
-  { label: "HIPAA Compliant",      top: "22%", right: "18%", delay: "0.8s",  duration: "5s"  },
-  { label: "ε-Differential Privacy", top: "42%", right: "2%",  delay: "1.6s",  duration: "3.8s"},
-  { label: "TLS 1.3 Encrypted",   top: "60%", right: "14%", delay: "0.4s",  duration: "4.5s"},
-  { label: "Zero Data Sharing",   top: "75%", right: "5%",  delay: "1.2s",  duration: "5.2s"},
+  { label: "Differential Privacy", top: "42%", right: "2%",  delay: "1.6s",  duration: "3.8s"},
+  { label: "TLS Encrypted",       top: "60%", right: "14%", delay: "0.4s",  duration: "4.5s"},
+  { label: "Records Stay Local",  top: "75%", right: "5%",  delay: "1.2s",  duration: "5.2s"},
   { label: "FedAvg Aggregation",  top: "14%", right: "32%", delay: "2s",    duration: "4.2s"},
-  { label: "Secure MPC",          top: "52%", right: "28%", delay: "0.6s",  duration: "3.5s"},
-  { label: "GDPR Ready",          top: "32%", right: "38%", delay: "1.8s",  duration: "4.8s"},
 ];
 
 function FloatingChips() {
@@ -130,22 +128,22 @@ function Hero() {
       <FloatingChips />
       <div className="max-w-7xl mx-auto">
         <div className="max-w-3xl">
-          <LiveBadge label="Secure Aggregation Active" />
+          <LiveBadge label="Research prototype · real UCI data" />
           <h1 className="mt-6 text-5xl md:text-6xl lg:text-7xl font-bold text-ink-950 tracking-tight leading-[1.05] text-balance">
             Smarter care.{" "}
-            <span className="text-medical-500">Zero data exposure.</span>
+            <span className="text-medical-500">Records stay local.</span>
           </h1>
           <p className="mt-6 text-lg md:text-xl text-ink-500 leading-relaxed max-w-2xl">
-            HealthGuard AI enables hospitals to collaboratively train disease prediction models
-            across networks. Patient data never leaves your firewall — secured by Federated Learning,
-            Differential Privacy, and TLS-encrypted aggregation.
+            HealthGuard AI lets hospitals jointly train diabetes and heart-disease predictors.
+            Raw patient records stay at each hospital. Only clipped, noise-protected model updates
+            are shared, over TLS.
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
             <Link
               to="/register"
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-medical-500 text-white font-semibold rounded-xl hover:bg-medical-600 transition-all shadow-lg shadow-medical-500/25 hover:shadow-xl hover:-translate-y-0.5"
             >
-              Start Free <ArrowRight className="w-4 h-4" />
+              Create demo account <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
               to="/login"
@@ -158,10 +156,10 @@ function Hero() {
             <EKGLine />
           </div>
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-8 max-w-2xl">
-            <Stat value="14" label="Hospital nodes" />
-            <Stat value="412" label="Global rounds" />
-            <Stat value="94.2%" label="Model accuracy" />
-            <Stat value="0.045" label="Privacy ε" />
+            <Stat value={String(FEDERATION.hospitals)} label="Simulated hospitals" />
+            <Stat value={String(FEDERATION.rounds)} label="Training rounds" />
+            <Stat value={`${ACCURACY.diabetes.federatedDp.mean}%`} label="Diabetes accuracy" />
+            <Stat value={`${ACCURACY.heart.federatedDp.mean.toFixed(1)}%`} label="Heart accuracy" />
           </div>
         </div>
       </div>
@@ -178,53 +176,33 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-const institutions = [
-  "Mayo Clinic",
-  "Johns Hopkins",
-  "Berlin Charité",
-  "Karolinska Institute",
-  "Cleveland Clinic",
-  "Tokyo Medical University",
-  "Toronto General",
-  "São Paulo Hospital das Clínicas",
-  "Stanford Medical Center",
-  "Oxford University Hospitals",
+const evaluationFacts = [
+  `${DATASETS.diabetes.name} · ${DATASETS.diabetes.records} records`,
+  `${DATASETS.heart.name} · ${DATASETS.heart.records} records`,
+  `${FEDERATION.hospitals} non-IID hospitals`,
+  `${FEDERATION.seeds} random seeds`,
 ];
 
-function TrustedBy() {
-  // duplicate for seamless loop
-  const items = [...institutions, ...institutions];
+function EvaluatedOn() {
   return (
-    <section className="py-12 border-y border-ink-100 bg-ink-50/50 overflow-hidden">
+    <section className="py-12 border-y border-ink-100 bg-ink-50/50">
       <div className="max-w-7xl mx-auto px-6 mb-8 text-center">
         <p className="text-xs font-semibold text-ink-400 uppercase tracking-widest">
-          Trusted by leading medical institutions worldwide
+          Evaluated on
         </p>
       </div>
-      <div className="relative">
-        {/* fade edges */}
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-ink-50/80 to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-ink-50/80 to-transparent z-10 pointer-events-none" />
-        {/* scrolling track */}
-        <div
-          className="flex gap-12 items-center"
-          style={{
-            animation: "scroll-x 30s linear infinite",
-            width: "max-content",
-          }}
-        >
-          {items.map((name, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white border border-ink-100 shadow-sm whitespace-nowrap"
-            >
-              <div className="w-6 h-6 rounded-md bg-medical-500/10 flex items-center justify-center shrink-0">
-                <ShieldPlus className="w-3.5 h-3.5 text-medical-500" />
-              </div>
-              <span className="text-sm font-semibold text-ink-700">{name}</span>
+      <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center gap-4">
+        {evaluationFacts.map((fact) => (
+          <div
+            key={fact}
+            className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white border border-ink-100 shadow-sm"
+          >
+            <div className="w-6 h-6 rounded-md bg-medical-500/10 flex items-center justify-center shrink-0">
+              <Database className="w-3.5 h-3.5 text-medical-500" />
             </div>
-          ))}
-        </div>
+            <span className="text-sm font-semibold text-ink-700">{fact}</span>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -232,10 +210,10 @@ function TrustedBy() {
 
 function HowItWorks() {
   const steps = [
-    { n: "01", title: "Local Training", body: "Each hospital trains the shared model on private clinical records. Data never leaves the firewall." },
-    { n: "02", title: "Differential Privacy", body: "Calibrated noise is injected into gradient updates, bounding individual patient re-identification risk." },
-    { n: "03", title: "FedAvg Aggregation", body: "The coordinator averages encrypted weight updates from all nodes into a global consensus model." },
-    { n: "04", title: "Global Dispatch", body: "The refined model is redistributed to every node, improving local diagnostic accuracy for the next round." },
+    { n: "01", title: "Local Training", body: "Each hospital trains the shared model on private clinical records. Raw records never leave the hospital." },
+    { n: "02", title: "Differential Privacy", body: "Calibrated noise is injected into gradient updates, limiting how much any single update can reveal." },
+    { n: "03", title: "FedAvg Aggregation", body: "The server averages the updates, weighted by each hospital's number of patients, into one global model." },
+    { n: "04", title: "Global Dispatch", body: `The refined model is redistributed to every node for the next round (${FEDERATION.rounds} rounds in total).` },
   ];
   return (
     <section id="how-it-works" className="px-6 py-24 border-t border-ink-200">
@@ -243,7 +221,7 @@ function HowItWorks() {
         <div className="max-w-2xl mb-16">
           <div className="text-xs font-bold text-medical-600 uppercase tracking-widest mb-4 font-mono">The Protocol</div>
           <h2 className="text-3xl md:text-5xl font-bold text-ink-950 tracking-tight text-balance">
-            Collective intelligence without exposure.
+            Learn together, keep records local.
           </h2>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -262,10 +240,10 @@ function HowItWorks() {
 
 function PrivacyPillars() {
   const pillars = [
-    { icon: Lock, title: "Differential Privacy", body: "Mathematical proof that individual records cannot be reverse-engineered from global model weights." },
-    { icon: ShieldPlus, title: "Secure Aggregation", body: "Cryptographic MPC ensures the coordinator only sees the sum of updates — never raw hospital gradients." },
-    { icon: Network, title: "TLS Everywhere", body: "Mutual-TLS 1.3 secures every hop between hospital nodes and the aggregation server." },
-    { icon: Brain, title: "Zero-Knowledge Hub", body: "The orchestrator remains blind to local data distributions while achieving maximum convergence." },
+    { icon: Lock, title: "Differential Privacy", body: `Each hospital's update is clipped to norm C = ${FEDERATION.clipNorm.toFixed(1)} and Gaussian noise is added before it is shared.` },
+    { icon: ScanSearch, title: "Measured, not assumed", body: `A membership-inference attack scored AUC ${MIA_AUC.min}–${MIA_AUC.max}, close to a coin toss (0.50), at every noise level tested.` },
+    { icon: Calculator, title: "Honest accounting", body: "The formal ε is derived with Rényi DP and reported for every noise level, including where the guarantee is weak." },
+    { icon: Network, title: "TLS", body: "Model updates are encrypted in transit between each hospital and the aggregation server." },
   ];
   return (
     <section id="security" className="px-6 py-24 bg-ink-950 text-white">
@@ -274,16 +252,11 @@ function PrivacyPillars() {
           <div>
             <div className="text-xs font-bold text-medical-400 uppercase tracking-widest mb-4 font-mono">Privacy Stack</div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-balance">
-              Clinical-grade guarantees at every layer.
+              Privacy, measured honestly.
             </h2>
             <p className="mt-6 text-ink-300 max-w-md">
-              We exceed HIPAA and GDPR mandates with a multi-layered cryptographic approach — verified through independent security audits.
+              Our threat model covers four adversaries (A1–A4). We state clearly what is and isn't defended.
             </p>
-            <div className="mt-8 flex flex-wrap gap-2">
-              {["HIPAA", "GDPR", "SOC 2", "ISO 27001"].map((l) => (
-                <span key={l} className="px-3 py-1 rounded-full border border-white/15 bg-white/5 text-xs font-mono font-semibold tracking-wider">{l}</span>
-              ))}
-            </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             {pillars.map(({ icon: Icon, title, body }) => (
@@ -304,16 +277,16 @@ function PrivacyPillars() {
 
 function Stats() {
   const cards = [
-    { tag: "Diabetes", headline: "+38%", body: "Improvement in early-onset detection sensitivity vs. locally-trained baselines across 8 partner sites." },
-    { tag: "Cardiac", headline: "0.94 AUC", body: "Federated CardioRisk-v4 outperforms every siloed model in cross-institutional validation." },
-    { tag: "Privacy", headline: "ε = 0.045", body: "Formal differential privacy budget maintained across all 412 training rounds. Audit-verified." },
+    { tag: "Diabetes", headline: `+${FEDERATED_GAIN.diabetes} pts`, body: `Accuracy rose from ${ACCURACY.diabetes.singleHospital}% (single hospital) to ${ACCURACY.diabetes.federatedDp.mean}% (federated, σ = ${ACCURACY.diabetes.federatedDp.sigma}).` },
+    { tag: "Heart disease", headline: `+${FEDERATED_GAIN.heart} pts`, body: `Accuracy rose from ${ACCURACY.heart.singleHospital}% (single hospital) to ${ACCURACY.heart.federatedDp.mean.toFixed(1)}% (federated, σ = ${ACCURACY.heart.federatedDp.sigma}).` },
+    { tag: "Privacy", headline: `AUC ${MIA_AUC.min}–${MIA_AUC.max}`, body: "The attack stayed near chance. The formal ε is large at noise levels that keep accuracy useful, and we report that honestly." },
   ];
   return (
     <section id="stats" className="px-6 py-24">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <div className="text-xs font-bold text-medical-600 uppercase tracking-widest mb-4 font-mono">Research Outcomes</div>
-          <h2 className="text-3xl md:text-4xl font-bold text-ink-950 tracking-tight">Proven results across institutions.</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-ink-950 tracking-tight">Results on real UCI data.</h2>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
           {cards.map(({ tag, headline, body }) => (
@@ -336,20 +309,18 @@ function CTA() {
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-medical-500/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-safety-500/10 rounded-full blur-3xl" />
         <div className="relative">
-          <LiveBadge label="Onboarding Q3 partners" />
-          <h2 className="mt-6 text-4xl md:text-5xl font-bold tracking-tight text-balance max-w-2xl">
-            Ready to join the federation?
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-balance max-w-2xl">
+            Explore the dashboard.
           </h2>
           <p className="mt-4 text-ink-300 max-w-xl">
-            Fourteen leading institutions already train superior diagnostic models on our infrastructure.
-            Bring your data — leave it exactly where it is.
+            A research prototype by ABES Institute of Technology, Ghaziabad. Try the dashboard with a demo account.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               to="/register"
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-medical-500 text-white font-semibold rounded-xl hover:bg-medical-600 transition-colors shadow-lg shadow-medical-500/30"
             >
-              Request access <ChevronRight className="w-4 h-4" />
+              Create demo account <ChevronRight className="w-4 h-4" />
             </Link>
             <Link
               to="/login"
@@ -373,7 +344,7 @@ function Footer() {
           <span className="text-xs font-mono text-ink-500 uppercase tracking-widest">Privacy-first federated learning</span>
         </div>
         <div className="flex gap-6 text-xs font-mono uppercase tracking-widest text-ink-500">
-          {["Security", "Compliance", "Ethics", "Contact"].map((l) => (
+          {["Security", "Contact"].map((l) => (
             <a key={l} href="#" className="hover:text-ink-950 transition-colors">{l}</a>
           ))}
         </div>
