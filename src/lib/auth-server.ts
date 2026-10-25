@@ -24,5 +24,9 @@ export const auth = betterAuth({
       department: { type: "string", required: false },
     },
   },
-  trustedOrigins: [process.env.BETTER_AUTH_URL || "http://localhost:3000"],
+  trustedOrigins: [
+    process.env.BETTER_AUTH_URL || "http://localhost:8080",
+    "https://healthguard-ai-zeta.vercel.app",
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+  ],
 });

@@ -66,6 +66,7 @@ export const nodes = pgTable("nodes", {
   dataSize: text("data_size"),
   patientCount: integer("patient_count").default(0),
   contribution: integer("contribution").default(0),
+  source: text("source").notNull().default("user"), // "paper" rows come from the research paper and cannot be deleted
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -84,6 +85,7 @@ export const models = pgTable("models", {
   totalRounds: integer("total_rounds").default(500),
   privacyBudget: real("privacy_budget").default(0.1),
   nodeCount: integer("node_count").default(0),
+  source: text("source").notNull().default("user"), // "paper" rows come from the research paper and cannot be deleted
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

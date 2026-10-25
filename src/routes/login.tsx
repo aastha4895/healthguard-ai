@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ShieldPlus, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import { signIn } from "@/lib/auth-client";
 import { setUser } from "@/lib/auth";
+import { ACCURACY, FEDERATION } from "@/lib/paper-data";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -24,7 +25,7 @@ function LoginPage() {
     setLoading(true);
     const result = await signIn.email({ email: form.email, password: form.password });
     if (result.error) {
-      setError(result.error.message || "Invalid email or password.");
+      setError(result.error.status === 401 ? "Wrong email or password." : result.error.message || "Couldn't sign in. Try again.");
       setLoading(false);
       return;
     }
@@ -45,9 +46,7 @@ function LoginPage() {
     <div className="min-h-screen bg-ink-50 flex">
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-ink-950 flex-col justify-between p-12 relative overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-medical-500/15 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-safety-500/10 rounded-full blur-3xl" />
-
+        
         <div className="relative flex items-center gap-3">
           <div className="w-9 h-9 bg-medical-500 rounded-xl flex items-center justify-center shadow-lg shadow-medical-500/30">
             <ShieldPlus className="w-5 h-5 text-white" />
@@ -57,24 +56,22 @@ function LoginPage() {
 
         <div className="relative space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-medical-500/20 border border-medical-500/30 text-medical-400 text-xs font-bold uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 bg-medical-400 rounded-full animate-pulse" />
-            Secure Aggregation Active
+            Research prototype · ABES IT
           </div>
           <h2 className="text-4xl font-bold text-white leading-tight">
-            Collective intelligence<br />
-            <span className="text-ink-400">without data exposure.</span>
+            Hospitals learn together.<br />
+            <span className="text-ink-400">Records stay local.</span>
           </h2>
           <p className="text-ink-400 text-sm leading-relaxed max-w-sm">
-            Train world-class disease prediction models across hospital networks.
-            Patient data never leaves your firewall.
+            Federated learning for diabetes and heart-disease prediction, with differential privacy and TLS on every update.
           </p>
 
           <div className="grid grid-cols-2 gap-4 pt-4">
             {[
-              { value: "14", label: "Hospital Nodes" },
-              { value: "94.2%", label: "Model Accuracy" },
-              { value: "412", label: "Training Rounds" },
-              { value: "ε 0.045", label: "Privacy Budget" },
+              { value: String(FEDERATION.hospitals), label: "Simulated hospitals" },
+              { value: String(FEDERATION.rounds), label: "Training rounds" },
+              { value: `${ACCURACY.diabetes.federatedDp.mean}%`, label: "Diabetes accuracy" },
+              { value: `${ACCURACY.heart.federatedDp.mean.toFixed(1)}%`, label: "Heart accuracy" },
             ].map(({ value, label }) => (
               <div key={label} className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <div className="text-2xl font-bold text-white font-mono">{value}</div>
@@ -84,9 +81,7 @@ function LoginPage() {
           </div>
         </div>
 
-        <p className="relative text-xs text-ink-600 font-mono">
-          HIPAA · GDPR · SOC 2 · ISO 27001
-        </p>
+        <p className="relative text-xs text-ink-500">Results on UCI Pima and Cleveland data, from the team's research paper.</p>
       </div>
 
       {/* Right panel - form */}
@@ -102,7 +97,7 @@ function LoginPage() {
 
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-ink-950">Welcome back</h1>
-            <p className="text-sm text-ink-500 mt-1">Sign in to your hospital node account</p>
+            <p className="text-sm text-ink-500 mt-1">Sign in to the HealthGuard dashboard</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -124,9 +119,6 @@ function LoginPage() {
                 <label className="block text-xs font-semibold text-ink-600 uppercase tracking-wider">
                   Password
                 </label>
-                <a href="#" className="text-xs text-medical-600 hover:text-medical-700 font-medium">
-                  Forgot password?
-                </a>
               </div>
               <div className="relative">
                 <input
@@ -167,15 +159,10 @@ function LoginPage() {
           <p className="mt-6 text-center text-sm text-ink-500">
             Don't have an account?{" "}
             <Link to="/register" className="text-medical-600 font-semibold hover:text-medical-700 transition-colors">
-              Register your hospital
+              Create an account
             </Link>
           </p>
 
-          <div className="mt-8 pt-6 border-t border-ink-200">
-            <p className="text-center text-xs text-ink-400 font-mono uppercase tracking-wider">
-              Protected by end-to-end encryption · TLS 1.3
-            </p>
-          </div>
         </div>
       </div>
     </div>

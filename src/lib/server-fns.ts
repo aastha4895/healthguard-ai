@@ -1,98 +1,145 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { z } from "zod";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db/client";
-import { nodes, models, predictions } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { nodes, models, predictions, user } from "@/db/schema";
+import { PAPER_MODELS, PAPER_NODES } from "@/db/seed";
+import { auth } from "@/lib/auth-server";
+import { computeRisk } from "@/lib/risk";
 
-// ── Nodes ────────────────────────────────────────────────────────────────────
+// Every write needs a signed-in user; the id comes from the session cookie,
+// never from the browser.
+async function requireUser() {
+  const session = await auth.api.getSession({ headers: getRequest().headers });
+  if (!session?.user) throw new Error("Your session has expired. Please sign in again.");
+  return session.user;
+}
+
+const parse = <T extends z.ZodTypeAny>(schema: T) => (data: unknown) => schema.parse(data) as z.infer<T>;
+
+// ── Hospitals (nodes) ───────────────────────────────────────────────────────
 export const getNodes = createServerFn({ method: "GET" }).handler(async () => {
-  return await db.select().from(nodes).orderBy(desc(nodes.createdAt));
+  return await db.select().from(nodes).orderBy(nodes.createdAt);
 });
 
 export const createNode = createServerFn({ method: "POST" })
-  .validator((data: {
-    name: string; location: string; country: string;
-    ipAddress?: string; patientCount?: number;
-  }) => data)
+  .validator(parse(z.object({
+    name: z.string().trim().min(2).max(80),
+    location: z.string().trim().min(2).max(120),
+    country: z.string().trim().min(2).max(60),
+    patientCount: z.number().int().min(0).max(10_000_000).optional(),
+  })))
   .handler(async ({ data }) => {
-    const [node] = await db.insert(nodes).values(data).returning();
+    await requireUser();
+    const [node] = await db.insert(nodes).values({ ...data, status: "online", source: "user" }).returning();
     return node;
   });
 
-export const updateNodeStatus = createServerFn({ method: "POST" })
-  .validator((data: { id: string; status: string }) => data)
+export const deleteNode = createServerFn({ method: "POST" })
+  .validator(parse(z.object({ id: z.string().uuid() })))
   .handler(async ({ data }) => {
-    const [node] = await db
-      .update(nodes)
-      .set({ status: data.status, updatedAt: new Date() })
-      .where(eq(nodes.id, data.id))
-      .returning();
-    return node;
+    await requireUser();
+    const rows = await db.delete(nodes).where(and(eq(nodes.id, data.id), ne(nodes.source, "paper"))).returning();
+    if (!rows.length) throw new Error("Hospitals from the paper's experiment can't be removed.");
+    return { ok: true };
   });
 
-// ── Models ───────────────────────────────────────────────────────────────────
+// ── Models ──────────────────────────────────────────────────────────────────
 export const getModels = createServerFn({ method: "GET" }).handler(async () => {
-  return await db.select().from(models).orderBy(desc(models.createdAt));
+  return await db.select().from(models).orderBy(models.createdAt);
 });
 
 export const createModel = createServerFn({ method: "POST" })
-  .validator((data: {
-    name: string; description?: string; disease: string; totalRounds?: number;
-  }) => data)
+  .validator(parse(z.object({
+    name: z.string().trim().min(2).max(80),
+    description: z.string().trim().max(500).optional(),
+    disease: z.string().trim().min(2).max(40),
+    totalRounds: z.number().int().min(1).max(1000),
+  })))
   .handler(async ({ data }) => {
-    const [model] = await db.insert(models).values(data).returning();
+    await requireUser();
+    const [model] = await db
+      .insert(models)
+      .values({ ...data, status: "planned", currentRound: 0, accuracy: null, auc: null, loss: null, privacyBudget: null, nodeCount: 0, source: "user" })
+      .returning();
     return model;
   });
 
-// ── Predictions ──────────────────────────────────────────────────────────────
-export const getPredictions = createServerFn({ method: "GET" })
-  .validator((data: { userId?: string }) => data)
+export const deleteModel = createServerFn({ method: "POST" })
+  .validator(parse(z.object({ id: z.string().uuid() })))
   .handler(async ({ data }) => {
-    if (data.userId) {
-      return await db
-        .select()
-        .from(predictions)
-        .where(eq(predictions.userId, data.userId))
-        .orderBy(desc(predictions.createdAt))
-        .limit(20);
-    }
-    return await db.select().from(predictions).orderBy(desc(predictions.createdAt)).limit(20);
+    await requireUser();
+    const rows = await db.delete(models).where(and(eq(models.id, data.id), ne(models.source, "paper"))).returning();
+    if (!rows.length) throw new Error("Models from the paper's experiment can't be removed.");
+    return { ok: true };
   });
+
+// ── Risk assessments (predictions) ──────────────────────────────────────────
+export const getMyPredictions = createServerFn({ method: "GET" }).handler(async () => {
+  const me = await requireUser();
+  return await db
+    .select()
+    .from(predictions)
+    .where(eq(predictions.userId, me.id))
+    .orderBy(desc(predictions.createdAt))
+    .limit(200);
+});
+
+const vitals = z.object({
+  age: z.number().int().min(1).max(120),
+  gender: z.enum(["male", "female", "other"]),
+  systolicBP: z.number().int().min(60).max(260),
+  diastolicBP: z.number().int().min(30).max(160).optional(),
+  heartRate: z.number().int().min(20).max(250).optional(),
+  cholesterol: z.number().int().min(50).max(600),
+  glucose: z.number().int().min(30).max(600),
+  bmi: z.number().min(10).max(80),
+  smoker: z.boolean(),
+  diabetic: z.boolean(),
+});
 
 export const savePrediction = createServerFn({ method: "POST" })
-  .validator((data: {
-    userId?: string; modelId?: string;
-    age?: number; gender?: string; systolicBP?: number; diastolicBP?: number;
-    cholesterol?: number; glucose?: number; bmi?: number; heartRate?: number;
-    smoker?: boolean; diabetic?: boolean;
-    riskLevel: string; riskScore: number; confidence: number;
-  }) => data)
+  .validator(parse(vitals))
   .handler(async ({ data }) => {
-    const [prediction] = await db.insert(predictions).values(data).returning();
-    return prediction;
+    const me = await requireUser();
+    // Recompute on the server so stored scores always follow the paper's rules.
+    const r = computeRisk(data);
+    const [row] = await db
+      .insert(predictions)
+      .values({ ...data, userId: me.id, riskLevel: r.level, riskScore: r.score, confidence: r.confidence })
+      .returning();
+    return row;
   });
 
-// ── Seed initial data ────────────────────────────────────────────────────────
+export const deletePrediction = createServerFn({ method: "POST" })
+  .validator(parse(z.object({ id: z.string().uuid() })))
+  .handler(async ({ data }) => {
+    const me = await requireUser();
+    await db.delete(predictions).where(and(eq(predictions.id, data.id), eq(predictions.userId, me.id)));
+    return { ok: true };
+  });
+
+// ── Profile ─────────────────────────────────────────────────────────────────
+export const updateProfile = createServerFn({ method: "POST" })
+  .validator(parse(z.object({
+    name: z.string().trim().min(2).max(80),
+    hospitalName: z.string().trim().max(120),
+    country: z.string().trim().max(60),
+    department: z.string().trim().max(60),
+  })))
+  .handler(async ({ data }) => {
+    const me = await requireUser();
+    const [row] = await db.update(user).set({ ...data, updatedAt: new Date() }).where(eq(user.id, me.id)).returning();
+    return { name: row.name, hospitalName: row.hospitalName, country: row.country, department: row.department };
+  });
+
+// ── Demo data from the paper ────────────────────────────────────────────────
+// Inserts the paper's 3 hospitals and 2 models once; safe to call repeatedly.
 export const seedData = createServerFn({ method: "POST" }).handler(async () => {
-  const existingNodes = await db.select().from(nodes).limit(1);
-  if (existingNodes.length > 0) return { seeded: false };
-
-  await db.insert(nodes).values([
-    { name: "Mayo Clinic", location: "Rochester, MN, US", country: "United States", ipAddress: "10.0.1.12", status: "online", latency: "0.4ms", dataSize: "2.4 GB", patientCount: 12400, contribution: 18 },
-    { name: "Cleveland Clinic", location: "Cleveland, OH, US", country: "United States", ipAddress: "10.0.1.15", status: "online", latency: "1.2ms", dataSize: "1.9 GB", patientCount: 9800, contribution: 15 },
-    { name: "Johns Hopkins Hospital", location: "Baltimore, MD, US", country: "United States", ipAddress: "10.0.1.22", status: "syncing", dataSize: "3.1 GB", patientCount: 15200, contribution: 12 },
-    { name: "Berlin Charité", location: "Berlin, DE", country: "Germany", ipAddress: "10.0.2.8", status: "online", latency: "18ms", dataSize: "2.8 GB", patientCount: 11600, contribution: 14 },
-    { name: "Karolinska Institute", location: "Stockholm, SE", country: "Sweden", ipAddress: "10.0.2.14", status: "online", latency: "22ms", dataSize: "1.6 GB", patientCount: 8200, contribution: 11 },
-    { name: "Tokyo Medical University", location: "Tokyo, JP", country: "Japan", ipAddress: "10.0.3.5", status: "offline", dataSize: "2.1 GB", patientCount: 10500, contribution: 0 },
-    { name: "Toronto General Hospital", location: "Toronto, ON, CA", country: "Canada", ipAddress: "10.0.1.31", status: "online", latency: "8ms", dataSize: "1.4 GB", patientCount: 7300, contribution: 9 },
-    { name: "São Paulo Hospital das Clínicas", location: "São Paulo, BR", country: "Brazil", ipAddress: "10.0.4.2", status: "online", latency: "45ms", dataSize: "1.8 GB", patientCount: 9100, contribution: 10 },
-  ]);
-
-  await db.insert(models).values([
-    { name: "CardioRisk-v4", description: "Cardiovascular disease risk prediction using patient vitals, lab results, and demographic data.", status: "training", disease: "Cardiac", accuracy: 94.2, auc: 0.94, loss: 0.184, currentRound: 412, totalRounds: 500, privacyBudget: 0.045, nodeCount: 12 },
-    { name: "DiabetesDetect-v2", description: "Early-onset Type 2 diabetes detection from blood glucose, BMI, and lifestyle indicators.", status: "completed", disease: "Diabetes", accuracy: 91.7, auc: 0.91, loss: 0.21, currentRound: 300, totalRounds: 300, privacyBudget: 0.062, nodeCount: 8 },
-    { name: "StrokePredict-v1", description: "Ischemic stroke risk stratification using neurological markers and patient history.", status: "paused", disease: "Neurology", accuracy: 87.3, auc: 0.87, loss: 0.29, currentRound: 180, totalRounds: 400, privacyBudget: 0.08, nodeCount: 6 },
-    { name: "SepsisAlert-v1", description: "Early sepsis detection from ICU vitals streams.", status: "training", disease: "Critical Care", accuracy: 89.1, auc: 0.89, loss: 0.26, currentRound: 95, totalRounds: 350, privacyBudget: 0.055, nodeCount: 10 },
-  ]);
-
+  const existing = await db.select({ id: nodes.id }).from(nodes).where(eq(nodes.source, "paper")).limit(1);
+  if (existing.length) return { seeded: false };
+  await db.insert(nodes).values(PAPER_NODES);
+  await db.insert(models).values(PAPER_MODELS);
   return { seeded: true };
 });

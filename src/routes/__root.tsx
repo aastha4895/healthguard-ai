@@ -81,13 +81,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Privacy-preserving federated learning platform for hospitals. Train disease prediction models collaboratively without sharing patient data.",
+          "Hospitals jointly train diabetes and heart-disease models with federated learning. Raw patient records stay at each hospital.",
       },
       { property: "og:title", content: "HealthGuard AI — Federated Healthcare Intelligence" },
       {
         property: "og:description",
         content:
-          "AI-powered health intelligence without exposing patient data. Federated Learning, Differential Privacy, and Secure Aggregation.",
+          "Federated learning for diabetes and heart-disease prediction across 3 simulated hospitals, with differential privacy and TLS. A research prototype from ABES IT.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

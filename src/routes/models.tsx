@@ -1,266 +1,182 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { useState, useEffect } from "react";
-import {
-  BrainCircuit, Plus, Play, Pause, CheckCircle,
-  Clock, BarChart2, Shield, ChevronRight, Search, Trash2, Loader2,
-} from "lucide-react";
-import { getModels, createModel } from "@/lib/server-fns";
+import { AppLayout, PageHeader, Panel, SourceNote } from "@/components/layout/AppLayout";
+import { useEffect, useState } from "react";
+import { BrainCircuit, Plus, Trash2, Loader2, Lock, Shield } from "lucide-react";
+import { getModels, createModel, deleteModel } from "@/lib/server-fns";
 import { Modal } from "@/components/ui/Modal";
+import { ACCURACY, FEDERATED_GAIN, SIGNIFICANCE } from "@/lib/paper-data";
 
 export const Route = createFileRoute("/models")({
   component: ModelsPage,
 });
 
-const statusConfig = {
-  training: { label: "Training", icon: Play, color: "text-medical-600", bg: "bg-medical-500/10 border-medical-500/20", dot: "bg-medical-500 animate-pulse" },
-  completed: { label: "Completed", icon: CheckCircle, color: "text-safety-600", bg: "bg-safety-500/10 border-safety-500/20", dot: "bg-safety-500" },
-  paused: { label: "Paused", icon: Pause, color: "text-amber-600", bg: "bg-amber-50 border-amber-200", dot: "bg-amber-400" },
+// Paper metrics per disease (Tables V and VI)
+const PAPER_METRICS: Record<string, { acc: (typeof ACCURACY)[keyof typeof ACCURACY]; gain: number; pVsNoDp: number }> = {
+  Diabetes: { acc: ACCURACY.diabetes, gain: FEDERATED_GAIN.diabetes, pVsNoDp: SIGNIFICANCE.diabetes.vsNoDp.p },
+  "Heart Disease": { acc: ACCURACY.heart, gain: FEDERATED_GAIN.heart, pVsNoDp: SIGNIFICANCE.heart.vsNoDp.p },
 };
 
-const diseaseColors: Record<string, string> = {
-  Cardiac: "bg-red-50 text-red-600 border-red-200",
-  Diabetes: "bg-blue-50 text-blue-600 border-blue-200",
-  Neurology: "bg-purple-50 text-purple-600 border-purple-200",
-  "Critical Care": "bg-orange-50 text-orange-600 border-orange-200",
-  Oncology: "bg-pink-50 text-pink-600 border-pink-200",
-  Other: "bg-ink-50 text-ink-600 border-ink-200",
-};
-
-const emptyForm = { name: "", description: "", disease: "Cardiac", totalRounds: "500" };
+const emptyForm = { name: "", description: "", disease: "Diabetes", totalRounds: "20" };
 
 function ModelsPage() {
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "training" | "completed" | "paused">("all");
-  const [allModels, setAllModels] = useState<any[]>([]);
+  const [models, setModels] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const load = () => getModels().then(setAllModels);
+  const load = () => getModels().then(setModels);
   useEffect(() => { load(); }, []);
-
-  const filtered = allModels.filter((m) => {
-    const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
-      (m.disease ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === "all" || m.status === filter;
-    return matchSearch && matchFilter;
-  });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await createModel({
-      data: {
-        name: form.name,
-        description: form.description || undefined,
-        disease: form.disease,
-        totalRounds: Number(form.totalRounds) || 500,
-      },
-    });
-    setSaving(false);
-    setModalOpen(false);
-    setForm(emptyForm);
+    setError("");
+    try {
+      await createModel({ data: { name: form.name, description: form.description || undefined, disease: form.disease, totalRounds: Number(form.totalRounds) || 20 } });
+      setModalOpen(false);
+      setForm(emptyForm);
+      load();
+    } catch (err: any) {
+      setError(err?.message?.includes("session") ? err.message : "Check the fields: the name needs at least 2 characters and rounds must be 1–1000.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    await deleteModel({ data: { id: deleteId } }).catch(() => null);
+    setDeleteId(null);
     load();
   };
 
-  const handleDelete = (id: string) => {
-    setAllModels((prev) => prev.filter((m) => m.id !== id));
-    setDeleteId(null);
-  };
+  const paper = models.filter((m) => m.source === "paper");
+  const planned = models.filter((m) => m.source !== "paper");
+  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-medical-400 focus:border-transparent";
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-ink-950">Federated Models</h1>
-            <p className="text-sm text-ink-500 mt-1">{allModels.length} models · {allModels.filter(m => m.status === "training").length} currently training</p>
-          </div>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-medical-500 text-white font-semibold rounded-xl hover:bg-medical-600 transition-colors text-sm shadow-lg shadow-medical-500/20"
-          >
-            <Plus className="w-4 h-4" /> New Model
-          </button>
-        </div>
+        <PageHeader
+          title="Models"
+          subtitle="Logistic-regression models trained with FedAvg and differential privacy. Accuracies are 5-seed averages from the paper."
+          action={
+            <button onClick={() => setModalOpen(true)} className="inline-flex items-center gap-2 px-4 py-2.5 bg-medical-500 text-white font-semibold rounded-xl hover:bg-medical-600 text-sm">
+              <Plus className="w-4 h-4" /> Plan a model
+            </button>
+          }
+        />
 
-        {/* Filters + Search */}
-        <div className="flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
-            <input
-              type="text"
-              placeholder="Search models..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-ink-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-medical-400 focus:border-transparent"
-            />
-          </div>
-          <div className="flex gap-2">
-            {(["all", "training", "completed", "paused"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors capitalize ${
-                  filter === f ? "bg-ink-950 text-white" : "bg-white border border-ink-200 text-ink-600 hover:border-ink-300"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Model cards */}
         <div className="grid lg:grid-cols-2 gap-4">
-          {filtered.map((model) => {
-            const sc = statusConfig[model.status as keyof typeof statusConfig] ?? statusConfig.paused;
-            const StatusIcon = sc.icon;
-            const progress = Math.round(((model.currentRound ?? 0) / (model.totalRounds ?? 500)) * 100);
-            const diseaseColor = diseaseColors[model.disease] ?? diseaseColors.Other;
-
+          {paper.map((m) => {
+            const pm = PAPER_METRICS[m.disease];
             return (
-              <div key={model.id} className="bg-white rounded-2xl border border-ink-200 p-6 hover:border-medical-300 hover:shadow-md transition-all">
-                <div className="flex items-start justify-between gap-3 mb-4">
+              <div key={m.id} className="bg-white rounded-2xl border border-ink-200 p-6">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl bg-ink-950 flex items-center justify-center shrink-0">
                       <BrainCircuit className="w-5 h-5 text-medical-400" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-ink-950">{model.name}</h3>
-                      <span className={`inline-block mt-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${diseaseColor}`}>
-                        {model.disease}
-                      </span>
+                      <h3 className="font-bold text-ink-950">{m.name}</h3>
+                      <p className="text-sm text-ink-500 mt-1">{m.description}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${sc.bg} ${sc.color}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-                      {sc.label}
-                    </span>
-                    <button
-                      onClick={() => setDeleteId(model.id)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors text-ink-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-safety-500/10 text-safety-600 text-[11px] font-semibold shrink-0"><Lock className="w-3 h-3" /> Completed</span>
                 </div>
 
-                {model.description && (
-                  <p className="text-sm text-ink-500 leading-relaxed mb-5">{model.description}</p>
+                <div className="mt-5">
+                  <div className="flex justify-between text-xs text-ink-500 mb-1.5"><span>Training</span><span className="font-semibold text-ink-700 tabular-nums">Round {m.currentRound} / {m.totalRounds}</span></div>
+                  <div className="h-2 rounded-full bg-ink-100 overflow-hidden"><div className="h-full bg-safety-500" style={{ width: "100%" }} /></div>
+                </div>
+
+                {pm && (
+                  <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    {[
+                      { label: "One hospital", value: `${pm.acc.singleHospital}%` },
+                      { label: "Federated, no DP", value: `${pm.acc.federatedNoDp}%` },
+                      { label: "Federated, σ 0.05", value: `${pm.acc.federatedDp.mean.toFixed(1)}%` },
+                      { label: "Gain", value: `+${pm.gain} pts` },
+                    ].map((x) => (
+                      <div key={x.label} className="p-2.5 rounded-xl bg-ink-50 border border-ink-100">
+                        <div className="text-[10px] text-ink-500 uppercase tracking-wider">{x.label}</div>
+                        <div className="font-bold text-ink-900 text-sm tabular-nums mt-1">{x.value}</div>
+                      </div>
+                    ))}
+                  </div>
                 )}
 
-                <div className="mb-5">
-                  <div className="flex items-center justify-between text-xs text-ink-500 mb-1.5">
-                    <span>Training Progress</span>
-                    <span className="font-mono font-semibold text-ink-700">Round {model.currentRound ?? 0} / {model.totalRounds ?? 500}</span>
-                  </div>
-                  <div className="h-2 w-full bg-ink-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${model.status === "completed" ? "bg-safety-500" : "bg-medical-500"}`}
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <div className="text-right text-[11px] text-ink-400 mt-1">{progress}%</div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-2 mb-5">
-                  {[
-                    { label: "Accuracy", value: model.accuracy ? `${model.accuracy}%` : "—" },
-                    { label: "AUC", value: model.auc ?? "—" },
-                    { label: "Loss", value: model.loss ?? "—" },
-                    { label: "Nodes", value: model.nodeCount ?? "—" },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="p-2.5 rounded-xl bg-ink-50 border border-ink-100 text-center">
-                      <div className="text-[10px] text-ink-500 uppercase tracking-wider mb-1">{label}</div>
-                      <div className="font-mono font-bold text-ink-900 text-sm">{String(value)}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-ink-100">
-                  <div className="flex items-center gap-3 text-xs text-ink-400">
-                    <span className="flex items-center gap-1"><Shield className="w-3 h-3" />ε = {model.privacyBudget ?? "—"}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(model.updatedAt).toLocaleDateString()}</span>
-                  </div>
-                  <button className="inline-flex items-center gap-1 text-xs font-semibold text-medical-600 hover:text-medical-700 transition-colors">
-                    View details <ChevronRight className="w-3 h-3" />
-                  </button>
+                <div className="mt-4 pt-4 border-t border-ink-100 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-500">
+                  <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> ε ≈ {Number(m.privacyBudget).toLocaleString()} at σ = 0.05</span>
+                  <span>{m.nodeCount} hospitals</span>
+                  {pm && <span>± {pm.acc.federatedDp.std} across seeds · vs no DP p = {pm.pVsNoDp}</span>}
                 </div>
               </div>
             );
           })}
         </div>
+        <SourceNote>Tables III, V and VI; paired t-tests in Sec. V.B. Light noise (σ = 0.05) costs no significant accuracy but gives no meaningful formal ε.</SourceNote>
 
-        {filtered.length === 0 && (
-          <div className="text-center py-16 text-ink-400">
-            <BarChart2 className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">No models found</p>
-          </div>
-        )}
+        <Panel title="Planned models" subtitle="Ideas registered by users. They have not been trained.">
+          {planned.length ? (
+            <div className="grid md:grid-cols-2 gap-3">
+              {planned.map((m) => (
+                <div key={m.id} className="p-4 rounded-xl border border-ink-200 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-ink-900">{m.name}</div>
+                    <div className="text-xs text-ink-500 mt-0.5">{m.disease} · {m.totalRounds} rounds planned</div>
+                    {m.description && <p className="text-sm text-ink-600 mt-2">{m.description}</p>}
+                  </div>
+                  <button onClick={() => setDeleteId(m.id)} aria-label={`Delete ${m.name}`} className="p-1.5 rounded-lg hover:bg-red-50 hover:text-red-500 text-ink-400 shrink-0">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-ink-500">None yet.</p>
+          )}
+        </Panel>
       </div>
 
-      {/* Create Model Modal */}
-      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setForm(emptyForm); }} title="Create Federated Model">
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setForm(emptyForm); setError(""); }} title="Plan a model">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-ink-600 uppercase tracking-wider mb-1.5">Model Name</label>
-            <input required value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. CardioRisk-v5"
-              className="w-full px-3 py-2.5 rounded-xl border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-medical-400 focus:border-transparent" />
+            <label htmlFor="m-name" className="block text-xs font-semibold text-ink-600 uppercase tracking-wider mb-1.5">Name</label>
+            <input id="m-name" required value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Diabetes · FedProx" className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-ink-600 uppercase tracking-wider mb-1.5">Disease Category</label>
-            <select required value={form.disease} onChange={(e) => setForm(p => ({ ...p, disease: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-xl border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-medical-400 focus:border-transparent">
-              {["Cardiac", "Diabetes", "Neurology", "Critical Care", "Oncology", "Other"].map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
+            <label htmlFor="m-disease" className="block text-xs font-semibold text-ink-600 uppercase tracking-wider mb-1.5">Disease</label>
+            <select id="m-disease" value={form.disease} onChange={(e) => setForm((p) => ({ ...p, disease: e.target.value }))} className={inputCls}>
+              {["Diabetes", "Heart Disease", "Other"].map((d) => <option key={d}>{d}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-ink-600 uppercase tracking-wider mb-1.5">Description</label>
-            <textarea value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Describe what this model predicts..."
-              rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-medical-400 focus:border-transparent resize-none" />
+            <label htmlFor="m-desc" className="block text-xs font-semibold text-ink-600 uppercase tracking-wider mb-1.5">Description</label>
+            <textarea id="m-desc" rows={3} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} placeholder="What should it predict, and from which data?" className={inputCls + " resize-none"} />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-ink-600 uppercase tracking-wider mb-1.5">Total Training Rounds</label>
-            <input type="number" value={form.totalRounds} onChange={(e) => setForm(p => ({ ...p, totalRounds: e.target.value }))}
-              placeholder="500"
-              className="w-full px-3 py-2.5 rounded-xl border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-medical-400 focus:border-transparent" />
+            <label htmlFor="m-rounds" className="block text-xs font-semibold text-ink-600 uppercase tracking-wider mb-1.5">Planned rounds</label>
+            <input id="m-rounds" type="number" min={1} max={1000} value={form.totalRounds} onChange={(e) => setForm((p) => ({ ...p, totalRounds: e.target.value }))} className={inputCls} />
           </div>
+          {error && <div className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{error}</div>}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setModalOpen(false)}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 text-ink-700 font-semibold text-sm hover:bg-ink-50 transition-colors">
-              Cancel
-            </button>
-            <button type="submit" disabled={saving}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-medical-500 text-white font-semibold rounded-xl hover:bg-medical-600 transition-colors text-sm disabled:opacity-60">
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><Plus className="w-4 h-4" /> Create Model</>}
+            <button type="button" onClick={() => setModalOpen(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 text-ink-700 font-semibold text-sm hover:bg-ink-50">Cancel</button>
+            <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-medical-500 text-white font-semibold rounded-xl hover:bg-medical-600 text-sm disabled:opacity-60">
+              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><Plus className="w-4 h-4" /> Save plan</>}
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Delete confirm */}
-      <Modal open={!!deleteId} onClose={() => setDeleteId(null)} title="Delete Model">
+      <Modal open={!!deleteId} onClose={() => setDeleteId(null)} title="Delete planned model">
         <div className="space-y-4">
-          <p className="text-sm text-ink-600">Are you sure you want to delete this model? All training progress will be lost.</p>
+          <p className="text-sm text-ink-600">Delete this planned model from the database?</p>
           <div className="flex gap-3">
-            <button onClick={() => setDeleteId(null)}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 text-ink-700 font-semibold text-sm hover:bg-ink-50 transition-colors">
-              Cancel
-            </button>
-            <button onClick={() => deleteId && handleDelete(deleteId)}
-              className="flex-1 px-4 py-2.5 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition-colors text-sm">
-              Delete Model
-            </button>
+            <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 text-ink-700 font-semibold text-sm hover:bg-ink-50">Cancel</button>
+            <button onClick={handleDelete} className="flex-1 px-4 py-2.5 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 text-sm">Delete</button>
           </div>
         </div>
       </Modal>
