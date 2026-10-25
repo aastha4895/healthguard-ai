@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { nodes, models, predictions, user } from "@/db/schema";
-import { PAPER_MODELS, PAPER_NODES } from "@/db/seed";
+import { LEGACY_DEMO_MODELS, LEGACY_DEMO_NODES, PAPER_MODELS, PAPER_NODES } from "@/db/seed";
 import { auth } from "@/lib/auth-server";
 import { computeRisk } from "@/lib/risk";
 
@@ -16,10 +16,30 @@ async function requireUser() {
   return session.user;
 }
 
+// Brings any database (dev or production) up to date: adds the "source"
+// column, removes the old invented demo rows and inserts the paper's rows.
+// Idempotent, and runs at most once per server instance.
+let ready: Promise<void> | null = null;
+function ensureData() {
+  ready ??= (async () => {
+    await db.execute(sql`ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'user'`);
+    await db.execute(sql`ALTER TABLE models ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'user'`);
+    await db.delete(nodes).where(and(ne(nodes.source, "paper"), inArray(nodes.name, LEGACY_DEMO_NODES)));
+    await db.delete(models).where(and(ne(models.source, "paper"), inArray(models.name, LEGACY_DEMO_MODELS)));
+    const existing = await db.select({ id: nodes.id }).from(nodes).where(eq(nodes.source, "paper")).limit(1);
+    if (!existing.length) {
+      await db.insert(nodes).values(PAPER_NODES);
+      await db.insert(models).values(PAPER_MODELS);
+    }
+  })().catch((e) => { ready = null; throw e; });
+  return ready;
+}
+
 const parse = <T extends z.ZodTypeAny>(schema: T) => (data: unknown) => schema.parse(data) as z.infer<T>;
 
 // ── Hospitals (nodes) ───────────────────────────────────────────────────────
 export const getNodes = createServerFn({ method: "GET" }).handler(async () => {
+  await ensureData();
   return await db.select().from(nodes).orderBy(nodes.createdAt);
 });
 
@@ -47,6 +67,7 @@ export const deleteNode = createServerFn({ method: "POST" })
 
 // ── Models ──────────────────────────────────────────────────────────────────
 export const getModels = createServerFn({ method: "GET" }).handler(async () => {
+  await ensureData();
   return await db.select().from(models).orderBy(models.createdAt);
 });
 
@@ -135,11 +156,7 @@ export const updateProfile = createServerFn({ method: "POST" })
   });
 
 // ── Demo data from the paper ────────────────────────────────────────────────
-// Inserts the paper's 3 hospitals and 2 models once; safe to call repeatedly.
 export const seedData = createServerFn({ method: "POST" }).handler(async () => {
-  const existing = await db.select({ id: nodes.id }).from(nodes).where(eq(nodes.source, "paper")).limit(1);
-  if (existing.length) return { seeded: false };
-  await db.insert(nodes).values(PAPER_NODES);
-  await db.insert(models).values(PAPER_MODELS);
-  return { seeded: true };
+  await ensureData();
+  return { ok: true };
 });

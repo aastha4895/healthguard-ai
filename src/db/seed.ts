@@ -38,3 +38,11 @@ export const PAPER_MODELS = [
   nodeCount: FEDERATION.hospitals,
   source: "paper",
 }));
+
+// Invented rows from the first Lovable version of the site. They are removed
+// automatically because they are not part of the paper's experiment.
+export const LEGACY_DEMO_NODES = [
+  "Mayo Clinic", "Cleveland Clinic", "Johns Hopkins Hospital", "Berlin Charité", "Karolinska Institute",
+  "Tokyo Medical University", "Toronto General Hospital", "São Paulo Hospital das Clínicas",
+];
+export const LEGACY_DEMO_MODELS = ["CardioRisk-v4", "DiabetesDetect-v2", "StrokePredict-v1", "SepsisAlert-v1"];
