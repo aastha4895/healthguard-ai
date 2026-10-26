@@ -1,12 +1,15 @@
 // Replaces all hospitals and models with the rows from the paper's experiment.
 // Users, sessions and saved risk assessments are not touched.
 // Usage: bun scripts/reset-demo-data.ts   (uses DATABASE_URL from .env)
+import { sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { models, nodes } from "@/db/schema";
 import { PAPER_MODELS, PAPER_NODES } from "@/db/seed";
 
 const host = new URL(process.env.DATABASE_URL!).host;
 console.log(`Resetting demo data on ${host}`);
+await db.execute(sql`ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'user'`);
+await db.execute(sql`ALTER TABLE models ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'user'`);
 const removedNodes = await db.delete(nodes).returning({ id: nodes.id });
 const removedModels = await db.delete(models).returning({ id: models.id });
 await db.insert(nodes).values(PAPER_NODES);

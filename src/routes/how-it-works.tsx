@@ -45,9 +45,9 @@ function FedAvgAnimation() {
   const showPackets = key === "send" || key === "upload";
 
   return (
-    <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6 items-center">
+    <div className="grid xl:grid-cols-[1.4fr_1fr] gap-6 items-center">
       <div className="overflow-x-auto">
-        <svg viewBox="0 0 600 340" className="w-full min-w-[420px]" role="img" aria-label="Federated averaging illustration">
+        <svg viewBox="0 0 600 340" className="w-full min-w-[360px] max-w-2xl mx-auto" role="img" aria-label="Federated averaging illustration">
           {HOSPITALS.map((h) => (
             <line key={h.name} x1={SERVER.x} y1={SERVER.y + 30} x2={h.x} y2={h.y - 34} stroke="oklch(0.87 0.02 255)" strokeWidth="2" strokeDasharray="5 5" />
           ))}

@@ -56,7 +56,7 @@ function PrivacyPage() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
             <div className="p-4 rounded-xl bg-ink-50 border border-ink-100">
-              <div className="text-xs text-ink-500 uppercase tracking-wider">ε after {FEDERATION.rounds} rounds</div>
+              <div className="text-xs text-ink-500 tracking-wider">ε after {FEDERATION.rounds} rounds</div>
               <div className="text-3xl font-bold text-ink-950 tabular-nums mt-1">{fmt(table?.epsilon ?? eps20)}</div>
               <div className="text-xs text-ink-500 mt-1">{table ? `Table III · closed form ${fmt(eps20)}` : sigma === 0 ? "σ = 0" : ""}</div>
             </div>
@@ -92,7 +92,7 @@ function PrivacyPage() {
                     <YAxis tick={{ fontSize: 11, fill: "oklch(0.554 0.046 257)" }} tickLine={false} axisLine={false} tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
                     <Tooltip formatter={(v) => [fmt(Number(v)), "ε"]} labelFormatter={(r) => `Round ${r}`} />
                     <ReferenceLine y={8} stroke="oklch(0.72 0.17 160)" strokeDasharray="4 4" label={{ value: "ε = 8", position: "insideTopLeft", fontSize: 11, fill: "oklch(0.63 0.16 160)" }} />
-                    <Line type="monotone" dataKey="epsilon" stroke="oklch(0.62 0.14 195)" strokeWidth={2.5} dot={false} />
+                    <Line isAnimationActive={false} type="monotone" dataKey="epsilon" stroke="oklch(0.62 0.14 195)" strokeWidth={2.5} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -103,7 +103,7 @@ function PrivacyPage() {
           <Panel title="Table III · formal ε at T = 20">
             <table className="w-full text-sm tabular-nums">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wider text-ink-500 border-b border-ink-100">
+                <tr className="text-left text-xs text-ink-500 border-b border-ink-100">
                   <th className="py-2">σ</th><th className="py-2">z = σ/C</th><th className="py-2 text-right">ε</th>
                 </tr>
               </thead>

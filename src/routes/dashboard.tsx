@@ -12,10 +12,10 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const accuracyChart = [
-  { condition: "Single hospital", Diabetes: ACCURACY.diabetes.singleHospital, Heart: ACCURACY.heart.singleHospital },
-  { condition: "Federated, no DP", Diabetes: ACCURACY.diabetes.federatedNoDp, Heart: ACCURACY.heart.federatedNoDp },
-  { condition: "Federated, σ = 0.05", Diabetes: ACCURACY.diabetes.federatedDp.mean, Heart: ACCURACY.heart.federatedDp.mean },
-  { condition: "Federated, σ = 2.0", Diabetes: ACCURACY.diabetes.federatedHeavyDp.mean, Heart: ACCURACY.heart.federatedHeavyDp.mean },
+  { condition: "One hospital", Diabetes: ACCURACY.diabetes.singleHospital, Heart: ACCURACY.heart.singleHospital },
+  { condition: "FL, no DP", Diabetes: ACCURACY.diabetes.federatedNoDp, Heart: ACCURACY.heart.federatedNoDp },
+  { condition: "FL, σ 0.05", Diabetes: ACCURACY.diabetes.federatedDp.mean, Heart: ACCURACY.heart.federatedDp.mean },
+  { condition: "FL, σ 2.0", Diabetes: ACCURACY.diabetes.federatedHeavyDp.mean, Heart: ACCURACY.heart.federatedHeavyDp.mean },
 ];
 
 function DashboardPage() {
@@ -27,7 +27,8 @@ function DashboardPage() {
     seedData()
       .catch(() => null)
       .then(() => Promise.all([getNodes(), getModels(), getMyPredictions().catch(() => [])]))
-      .then(([n, m, p]) => { setNodes(n); setModels(m); setMine(p); });
+      .then(([n, m, p]) => { setNodes(n); setModels(m); setMine(p); })
+      .catch(() => null);
   }, []);
 
   return (
@@ -52,13 +53,13 @@ function DashboardPage() {
                 <BarChart data={accuracyChart} margin={{ top: 20, right: 8, left: -12, bottom: 0 }}>
                   <CartesianGrid vertical={false} stroke="oklch(0.929 0.013 255)" />
                   <XAxis dataKey="condition" tick={{ fontSize: 11, fill: "oklch(0.554 0.046 257)" }} tickLine={false} axisLine={false} interval={0} />
-                  <YAxis domain={[40, 90]} tick={{ fontSize: 11, fill: "oklch(0.554 0.046 257)" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
+                  <YAxis domain={[40, 90]} ticks={[40, 50, 60, 70, 80, 90]} tick={{ fontSize: 11, fill: "oklch(0.554 0.046 257)" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
                   <Tooltip formatter={(v) => `${v}%`} cursor={{ fill: "oklch(0.968 0.007 247)" }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="Diabetes" fill="oklch(0.62 0.14 195)" radius={[4, 4, 0, 0]}>
+                  <Bar isAnimationActive={false} dataKey="Diabetes" fill="oklch(0.62 0.14 195)" radius={[4, 4, 0, 0]}>
                     <LabelList dataKey="Diabetes" position="top" fontSize={10} formatter={(v: number) => `${v}`} />
                   </Bar>
-                  <Bar dataKey="Heart" fill="oklch(0.32 0.05 260)" radius={[4, 4, 0, 0]}>
+                  <Bar isAnimationActive={false} dataKey="Heart" fill="oklch(0.32 0.05 260)" radius={[4, 4, 0, 0]}>
                     <LabelList dataKey="Heart" position="top" fontSize={10} formatter={(v: number) => `${v}`} />
                   </Bar>
                 </BarChart>

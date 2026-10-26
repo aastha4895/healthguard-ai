@@ -88,7 +88,7 @@ function PredictionsHistoryPage() {
                     <XAxis dataKey="n" tick={{ fontSize: 11, fill: "oklch(0.554 0.046 257)" }} tickLine={false} axisLine={false} label={{ value: "Check #", position: "insideBottomRight", offset: -2, fontSize: 11 }} />
                     <YAxis domain={[0, 100]} ticks={[0, 30, 55, 100]} tick={{ fontSize: 11, fill: "oklch(0.554 0.046 257)" }} tickLine={false} axisLine={false} />
                     <Tooltip labelFormatter={(n) => chart[Number(n) - 1]?.when ?? ""} formatter={(v) => [v, "Score"]} />
-                    <Line type="monotone" dataKey="score" stroke="oklch(0.53 0.13 198)" strokeWidth={2.5} dot={{ r: 4 }} />
+                    <Line isAnimationActive={false} type="monotone" dataKey="score" stroke="oklch(0.53 0.13 198)" strokeWidth={2.5} dot={{ r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

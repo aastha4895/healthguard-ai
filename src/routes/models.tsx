@@ -101,7 +101,7 @@ function ModelsPage() {
                       { label: "Gain", value: `+${pm.gain} pts` },
                     ].map((x) => (
                       <div key={x.label} className="p-2.5 rounded-xl bg-ink-50 border border-ink-100">
-                        <div className="text-[10px] text-ink-500 uppercase tracking-wider">{x.label}</div>
+                        <div className="text-[11px] text-ink-500">{x.label}</div>
                         <div className="font-bold text-ink-900 text-sm tabular-nums mt-1">{x.value}</div>
                       </div>
                     ))}
