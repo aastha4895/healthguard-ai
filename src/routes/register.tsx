@@ -84,7 +84,7 @@ function RegisterPage() {
                 </div>
                 <div>
                   <label htmlFor="r-name" className={labelCls}>Full name</label>
-                  <input id="r-name" required value={form.name} onChange={set("name")} placeholder="Aastha Tiwari" className={inputCls} />
+                  <input id="r-name" required value={form.name} onChange={set("name")} placeholder="Your full name" className={inputCls} />
                 </div>
                 <div>
                   <label htmlFor="r-email" className={labelCls}>Email</label>

@@ -143,7 +143,7 @@ function Hero() {
               to="/register"
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-medical-500 text-white font-semibold rounded-xl hover:bg-medical-600 transition-all shadow-lg shadow-medical-500/25 hover:shadow-xl hover:-translate-y-0.5"
             >
-              Create demo account <ArrowRight className="w-4 h-4" />
+              Create account <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
               to="/login"
@@ -313,14 +313,14 @@ function CTA() {
             Explore the dashboard.
           </h2>
           <p className="mt-4 text-ink-300 max-w-xl">
-            A research prototype by ABES Institute of Technology, Ghaziabad. Try the dashboard with a demo account.
+            A research prototype by ABES Institute of Technology, Ghaziabad. Create an account to try the dashboard.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               to="/register"
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-medical-500 text-white font-semibold rounded-xl hover:bg-medical-600 transition-colors shadow-lg shadow-medical-500/30"
             >
-              Create demo account <ChevronRight className="w-4 h-4" />
+              Create account <ChevronRight className="w-4 h-4" />
             </Link>
             <Link
               to="/login"
